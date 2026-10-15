@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Somniva · EEG 수면 분석</title>
+<style>
+:root{
+  --bg:#070b1c; --card:rgba(16,22,48,.72); --card-solid:#111833; --line:rgba(160,180,255,.18);
+  --text:#eaf0ff; --muted:#a9b4d6; --accent:#7c9cff; --accent-2:#a78bfa; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --wake:#f87171; --rem:#a78bfa; --n1:#7dd3fc; --n2:#60a5fa; --n3:#3b5bdb;
+  --h:48px; --r:12px; --gap:16px;
+  --font: system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Nanum Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.6;min-height:100vh;overflow-x:hidden}
+
+/* ===== 배경영상 + 모션 (항상 켜짐) ===== */
+.bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3;filter:saturate(1.1) brightness(.9)}
+.bg-shade{position:fixed;inset:0;z-index:-2;background:radial-gradient(ellipse at 50% 0%,rgba(7,11,28,.15),rgba(7,11,28,.65) 70%)}
+#motion{position:fixed;inset:0;z-index:-1;pointer-events:none}
+
+/* ===== 레이아웃 ===== */
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:rgba(7,11,28,.55);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.3px}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent);animation:pulse 2.4s ease-in-out infinite}
+nav.steps{display:flex;gap:6px}
+nav.steps a{color:var(--muted);text-decoration:none;font-size:14px;padding:8px 12px;border-radius:999px;transition:.2s}
+nav.steps a:hover{color:var(--text);background:rgba(124,156,255,.15)}
+
+.hero{padding:72px 0 40px;text-align:center}
+.hero h1{font-size:clamp(28px,4.4vw,46px);line-height:1.25;margin:0 0 14px;letter-spacing:-.5px}
+.hero h1 span{background:linear-gradient(90deg,#9db4ff,#c4b5fd,#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:shine 6s linear infinite}
+.hero p{color:var(--muted);max-width:640px;margin:0 auto 26px;font-size:17px}
+.wave-svg{display:block;margin:0 auto 26px;width:min(560px,90%);height:70px}
+.wave-svg path{fill:none;stroke:url(#wg);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 3.2s ease forwards, drift 8s 3.2s linear infinite}
+
+section.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:32px;margin:0 0 28px;backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.sec-num{flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1030}
+.sec-head h2{margin:0;font-size:22px}
+.sec-head p{margin:2px 0 0;color:var(--muted);font-size:14px}
+
+/* ===== 폼: 모든 입력/버튼 높이·간격 통일 ===== */
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap) 20px;align-items:end}
+.field{display:flex;flex-direction:column;gap:8px;min-width:0}
+.field.span-3{grid-column:1/-1}
+.field label,.field .label{font-size:14px;font-weight:600;color:#cdd6f6}
+.input,select.input{width:100%;height:var(--h);padding:0 14px;border-radius:var(--r);border:1px solid var(--line);background:rgba(8,12,30,.7);color:var(--text);font:inherit;font-size:15px;outline:none;transition:border-color .2s, box-shadow .2s}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,156,255,.25)}
+input[type=time].input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#a9b4d6 50%),linear-gradient(135deg,#a9b4d6 50%,transparent 50%);background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;background-size:5px 5px;background-repeat:no-repeat}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span{display:flex;align-items:center;justify-content:center;height:var(--h);padding:0 12px;border-radius:var(--r);border:1px solid var(--line);background:rgba(8,12,30,.55);font-size:14px;cursor:pointer;text-align:center;transition:.18s}
+.chip input:checked + span{border-color:var(--accent);background:rgba(124,156,255,.22);color:#fff;box-shadow:inset 0 0 0 1px var(--accent)}
+.chip span:hover{border-color:rgba(124,156,255,.6)}
+
+.btn-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center}
